@@ -2,72 +2,94 @@
 
 set -e
 
-echo "🚀 Setting up Txen interpreter..."
+# Colors
+GREEN="\033[0;32m"
+YELLOW="\033[1;33m"
+CYAN="\033[0;36m"
+RED="\033[0;31m"
+RESET="\033[0m"
 
-# Check for essential packages (python, curl)
+spinner() {
+  local pid=$1
+  local delay=0.1
+  local spinstr='|/-\'
+  while kill -0 "$pid" 2>/dev/null; do
+    local temp=${spinstr#?}
+    printf " [%c]  " "$spinstr"
+    spinstr=$temp${spinstr%"$temp"}
+    sleep $delay
+    printf "\b\b\b\b\b\b"
+  done
+  printf "      \b\b\b\b\b\b"
+}
+
+echo -e "${CYAN}🚀 Starting Txen setup...${RESET}"
+
 pkg_install_if_missing() {
   if ! command -v "$1" > /dev/null 2>&1; then
-    echo "$1 not found. Installing $1..."
-    pkg install -y "$1"
+    echo -ne "${YELLOW}Installing $1...${RESET}"
+    pkg install -y "$1" > /tmp/pkginstall.log 2>&1 &
+    spinner $!
+    wait $!
+    if [ $? -eq 0 ]; then
+      echo -e "${GREEN} Done!${RESET}"
+    else
+      echo -e "${RED} Failed! Check /tmp/pkginstall.log${RESET}"
+      exit 1
+    fi
   else
-    echo "$1 already installed."
+    echo -e "${GREEN}$1 is already installed.${RESET}"
   fi
 }
 
 pkg_install_if_missing python
 pkg_install_if_missing curl
 
-# Create bin directory if missing
 BIN_DIR="$HOME/bin"
 if [ ! -d "$BIN_DIR" ]; then
-  echo "Creating bin directory: $BIN_DIR"
+  echo -e "${CYAN}Creating bin directory at $BIN_DIR...${RESET}"
   mkdir -p "$BIN_DIR"
 fi
 
-# Create a hidden folder to keep the actual interpreter code clean and out of sight
 TXEN_DIR="$HOME/.txen"
 if [ ! -d "$TXEN_DIR" ]; then
-  echo "Creating Txen directory: $TXEN_DIR"
+  echo -e "${CYAN}Creating Txen directory at $TXEN_DIR...${RESET}"
   mkdir -p "$TXEN_DIR"
 fi
 
-# Download the interpreter to the hidden folder
 TXEN_PY="$TXEN_DIR/txen.py"
 TXEN_URL="https://raw.githubusercontent.com/server-luks/TXEN/refs/heads/main/txen/txen.py"
 
-echo "Downloading Txen interpreter to $TXEN_PY ..."
-curl -fsSL "$TXEN_URL" -o "$TXEN_PY"
+echo -ne "${YELLOW}Downloading Txen interpreter...${RESET}"
+curl -fsSL "$TXEN_URL" -o "$TXEN_PY" > /dev/null 2>&1 &
+spinner $!
+wait $!
 chmod +x "$TXEN_PY"
+echo -e "${GREEN} Done!${RESET}"
 
-# Create a small wrapper script in ~/bin that calls the interpreter with python3
 WRAPPER="$BIN_DIR/txen"
-echo "Creating wrapper executable at $WRAPPER ..."
+echo -e "${CYAN}Creating wrapper executable at $WRAPPER...${RESET}"
 
 cat > "$WRAPPER" << EOF
 #!/bin/bash
 python3 "$TXEN_PY" "\$@"
 EOF
-
 chmod +x "$WRAPPER"
+echo -e "${GREEN}Wrapper created successfully.${RESET}"
 
-echo "✅ Installed 'txen' command in $WRAPPER"
-
-# Create sample script in home folder
 SAMPLE_SCRIPT="$HOME/hello.txen"
 cat > "$SAMPLE_SCRIPT" << 'EOF'
 print Hello from Txen!
 EOF
+echo -e "${CYAN}Sample script created at $SAMPLE_SCRIPT.${RESET}"
 
-echo "📄 Created sample script at $SAMPLE_SCRIPT"
-
 echo
-echo "To run Txen REPL, type:"
-echo "    txen"
+echo -e "${GREEN}Setup complete! 🎉${RESET}"
 echo
-echo "To run the sample script, type:"
-echo "    txen hello.txen"
+echo -e "To run Txen REPL, type: ${YELLOW}txen${RESET}"
+echo -e "To run the sample script, type: ${YELLOW}txen hello.txen${RESET}"
 echo
-echo "Make sure '$BIN_DIR' is in your PATH environment variable."
-echo "If not, add this to your shell config file (~/.bashrc or ~/.zshrc):"
-echo "    export PATH=\"$BIN_DIR:\$PATH\""
-echo "Then reload your shell or restart Termux."
+echo -e "Make sure ${YELLOW}$BIN_DIR${RESET} is in your PATH environment variable."
+echo -e "If not, add this to your shell config (~/.bashrc or ~/.zshrc):"
+echo -e "  ${CYAN}export PATH=\"$BIN_DIR:\$PATH\"${RESET}"
+echo -e "Then reload your shell or restart Termux."
