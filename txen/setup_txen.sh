@@ -9,6 +9,8 @@ CYAN="\033[0;36m"
 RED="\033[0;31m"
 RESET="\033[0m"
 
+LOGFILE="$HOME/.txen_setup.log"
+
 spinner() {
   local pid=$1
   local delay=0.1
@@ -28,15 +30,10 @@ echo -e "${CYAN}🚀 Starting Txen setup...${RESET}"
 pkg_install_if_missing() {
   if ! command -v "$1" > /dev/null 2>&1; then
     echo -ne "${YELLOW}Installing $1...${RESET}"
-    pkg install -y "$1" > /tmp/pkginstall.log 2>&1 &
+    pkg install -y "$1" > "$LOGFILE" 2>&1 &
     spinner $!
     wait $!
-    if [ $? -eq 0 ]; then
-      echo -e "${GREEN} Done!${RESET}"
-    else
-      echo -e "${RED} Failed! Check /tmp/pkginstall.log${RESET}"
-      exit 1
-    fi
+    echo -e "${GREEN} Done!${RESET}"
   else
     echo -e "${GREEN}$1 is already installed.${RESET}"
   fi
@@ -46,22 +43,16 @@ pkg_install_if_missing python
 pkg_install_if_missing curl
 
 BIN_DIR="$HOME/bin"
-if [ ! -d "$BIN_DIR" ]; then
-  echo -e "${CYAN}Creating bin directory at $BIN_DIR...${RESET}"
-  mkdir -p "$BIN_DIR"
-fi
+mkdir -p "$BIN_DIR"
 
 TXEN_DIR="$HOME/.txen"
-if [ ! -d "$TXEN_DIR" ]; then
-  echo -e "${CYAN}Creating Txen directory at $TXEN_DIR...${RESET}"
-  mkdir -p "$TXEN_DIR"
-fi
+mkdir -p "$TXEN_DIR"
 
 TXEN_PY="$TXEN_DIR/txen.py"
 TXEN_URL="https://raw.githubusercontent.com/server-luks/TXEN/refs/heads/main/txen/txen.py"
 
 echo -ne "${YELLOW}Downloading Txen interpreter...${RESET}"
-curl -fsSL "$TXEN_URL" -o "$TXEN_PY" > /dev/null 2>&1 &
+curl -fsSL "$TXEN_URL" -o "$TXEN_PY" > "$LOGFILE" 2>&1 &
 spinner $!
 wait $!
 chmod +x "$TXEN_PY"
