@@ -4,70 +4,70 @@ set -e
 
 echo "🚀 Setting up Txen interpreter..."
 
-# Function to check if a package is installed
-pkg_installed() {
-    command -v "$1" >/dev/null 2>&1
+# Check for essential packages (python, curl)
+pkg_install_if_missing() {
+  if ! command -v "$1" > /dev/null 2>&1; then
+    echo "$1 not found. Installing $1..."
+    pkg install -y "$1"
+  else
+    echo "$1 already installed."
+  fi
 }
 
-# Install Python if not installed
-if ! pkg_installed python; then
-    echo "Python not found. Installing Python..."
-    pkg install -y python
-else
-    echo "Python is already installed."
-fi
+pkg_install_if_missing python
+pkg_install_if_missing curl
 
-# Install wget if not installed
-if ! pkg_installed wget; then
-    echo "wget not found. Installing wget..."
-    pkg install -y wget
-else
-    echo "wget is already installed."
-fi
-
-# Install coreutils if not installed (for commands like cp, mv, etc)
-if ! pkg_installed cp; then
-    echo "coreutils not found. Installing coreutils..."
-    pkg install -y coreutils
-else
-    echo "coreutils is already installed."
-fi
-
+# Create bin directory if missing
 BIN_DIR="$HOME/bin"
-TXEN_URL="https://raw.githubusercontent.com/server-luks/TXEN/refs/heads/main/txen/txen.py"
-TXEN_PATH="$BIN_DIR/txen"
-
-# Create bin directory if it doesn't exist
 if [ ! -d "$BIN_DIR" ]; then
-    echo "Creating directory: $BIN_DIR"
-    mkdir -p "$BIN_DIR"
+  echo "Creating bin directory: $BIN_DIR"
+  mkdir -p "$BIN_DIR"
 fi
 
-# Download the txen.py file
-echo "Downloading txen.py from GitHub..."
-curl -fsSL "$TXEN_URL" -o "$TXEN_PATH"
+# Create a hidden folder to keep the actual interpreter code clean and out of sight
+TXEN_DIR="$HOME/.txen"
+if [ ! -d "$TXEN_DIR" ]; then
+  echo "Creating Txen directory: $TXEN_DIR"
+  mkdir -p "$TXEN_DIR"
+fi
 
-# Make it executable
-chmod +x "$TXEN_PATH"
+# Download the interpreter to the hidden folder
+TXEN_PY="$TXEN_DIR/txen.py"
+TXEN_URL="https://raw.githubusercontent.com/server-luks/TXEN/refs/heads/main/txen/txen.py"
 
-echo "✅ Txen installed as command 'txen' in $BIN_DIR."
+echo "Downloading Txen interpreter to $TXEN_PY ..."
+curl -fsSL "$TXEN_URL" -o "$TXEN_PY"
+chmod +x "$TXEN_PY"
 
-# Create a sample script
-cat > "$HOME/hello.txen" << 'EOF'
+# Create a small wrapper script in ~/bin that calls the interpreter with python3
+WRAPPER="$BIN_DIR/txen"
+echo "Creating wrapper executable at $WRAPPER ..."
+
+cat > "$WRAPPER" << EOF
+#!/bin/bash
+python3 "$TXEN_PY" "\$@"
+EOF
+
+chmod +x "$WRAPPER"
+
+echo "✅ Installed 'txen' command in $WRAPPER"
+
+# Create sample script in home folder
+SAMPLE_SCRIPT="$HOME/hello.txen"
+cat > "$SAMPLE_SCRIPT" << 'EOF'
 print Hello from Txen!
 EOF
 
-echo "📄 Sample script 'hello.txen' created in your home directory."
+echo "📄 Created sample script at $SAMPLE_SCRIPT"
 
 echo
-echo "To start Txen REPL, run:"
+echo "To run Txen REPL, type:"
 echo "    txen"
 echo
-echo "To run the sample script, run:"
+echo "To run the sample script, type:"
 echo "    txen hello.txen"
 echo
-
-echo "⚠️  Make sure '$HOME/bin' is in your PATH environment variable."
-echo "If it's not, add this line to your shell config (~/.bashrc or ~/.zshrc):"
-echo "    export PATH=\"$HOME/bin:\$PATH\""
+echo "Make sure '$BIN_DIR' is in your PATH environment variable."
+echo "If not, add this to your shell config file (~/.bashrc or ~/.zshrc):"
+echo "    export PATH=\"$BIN_DIR:\$PATH\""
 echo "Then reload your shell or restart Termux."
