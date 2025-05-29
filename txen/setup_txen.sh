@@ -1,86 +1,41 @@
-#!/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 
-set -e
+# 📦 Txen Setup Script (Termux)
+# Author: You + ChatGPT 😎
 
-# Colors
-GREEN="\033[0;32m"
-YELLOW="\033[1;33m"
-CYAN="\033[0;36m"
-RED="\033[0;31m"
-RESET="\033[0m"
+echo -e "\033[1;36m🚀 Starting Txen Setup...\033[0m"
+sleep 0.5
 
-LOGFILE="$HOME/.txen_setup.log"
+# 1. Make required directories
+echo -e "\033[1;34m📁 Creating folders...\033[0m"
+mkdir -p $HOME/.txen
+mkdir -p $HOME/bin
+sleep 0.5
 
-spinner() {
-  local pid=$1
-  local delay=0.1
-  local spinstr='|/-\'
-  while kill -0 "$pid" 2>/dev/null; do
-    local temp=${spinstr#?}
-    printf " [%c]  " "$spinstr"
-    spinstr=$temp${spinstr%"$temp"}
-    sleep $delay
-    printf "\b\b\b\b\b\b"
-  done
-  printf "      \b\b\b\b\b\b"
-}
+# 2. Install Python if not installed
+echo -e "\033[1;34m🐍 Installing Python...\033[0m"
+pkg install -y python > $HOME/setup_txen.log 2>&1
 
-echo -e "${CYAN}🚀 Starting Txen setup...${RESET}"
+# 3. Download txen.py
+echo -e "\033[1;34m⬇️ Downloading main Txen file...\033[0m"
+curl -s -o $HOME/.txen/txen.py https://raw.githubusercontent.com/server-luks/TXEN/refs/heads/main/txen/txen.py
 
-pkg_install_if_missing() {
-  if ! command -v "$1" > /dev/null 2>&1; then
-    echo -ne "${YELLOW}Installing $1...${RESET}"
-    pkg install -y "$1" > "$LOGFILE" 2>&1 &
-    spinner $!
-    wait $!
-    echo -e "${GREEN} Done!${RESET}"
-  else
-    echo -e "${GREEN}$1 is already installed.${RESET}"
-  fi
-}
+# 4. Create the txen command
+echo -e "\033[1;34m⚙️ Creating launcher command...\033[0m"
+echo 'python3 $HOME/.txen/txen.py "$@"' > $HOME/bin/txen
+chmod +x $HOME/bin/txen
 
-pkg_install_if_missing python
-pkg_install_if_missing curl
+# 5. Add ~/bin to PATH for both bash and sh
+echo -e "\033[1;34m🔧 Updating PATH for bash and sh...\033[0m"
+for rc in $HOME/.bashrc $HOME/.profile; do
+    if ! grep -q 'export PATH="$HOME/bin:$PATH"' "$rc"; then
+        echo 'export PATH="$HOME/bin:$PATH"' >> "$rc"
+    fi
+done
 
-BIN_DIR="$HOME/bin"
-mkdir -p "$BIN_DIR"
+# 6. Apply it now
+export PATH="$HOME/bin:$PATH"
 
-TXEN_DIR="$HOME/.txen"
-mkdir -p "$TXEN_DIR"
-
-TXEN_PY="$TXEN_DIR/txen.py"
-TXEN_URL="https://raw.githubusercontent.com/server-luks/TXEN/refs/heads/main/txen/txen.py"
-
-echo -ne "${YELLOW}Downloading Txen interpreter...${RESET}"
-curl -fsSL "$TXEN_URL" -o "$TXEN_PY" > "$LOGFILE" 2>&1 &
-spinner $!
-wait $!
-chmod +x "$TXEN_PY"
-echo -e "${GREEN} Done!${RESET}"
-
-WRAPPER="$BIN_DIR/txen"
-echo -e "${CYAN}Creating wrapper executable at $WRAPPER...${RESET}"
-
-cat > "$WRAPPER" << EOF
-#!/bin/bash
-python3 "$TXEN_PY" "\$@"
-EOF
-chmod +x "$WRAPPER"
-echo -e "${GREEN}Wrapper created successfully.${RESET}"
-
-SAMPLE_SCRIPT="$HOME/hello.txen"
-cat > "$SAMPLE_SCRIPT" << 'EOF'
-print Hello from Txen!
-EOF
-echo -e "${CYAN}Sample script created at $SAMPLE_SCRIPT.${RESET}"
-
-echo
-echo -e "${GREEN}Setup complete! 🎉${RESET}"
-echo
-echo -e "To run Txen REPL, type: ${YELLOW}txen${RESET}"
-echo -e "To run the sample script, type: ${YELLOW}txen hello.txen${RESET}"
-echo
-echo -e "Make sure ${YELLOW}$BIN_DIR${RESET} is in your PATH environment variable."
-echo -e "If not, add this to your shell config (~/.bashrc or ~/.zshrc):"
-echo -e "  ${CYAN}export PATH=\"$BIN_DIR:\$PATH\"${RESET}"
-echo -e "Then reload your shell or restart Termux."
+# 7. Done!
+echo -e "\033[1;32m✅ Txen is ready to use! Just type:\033[0m \033[1;33mtxen\033[0m"
+echo -e "\033[1;90m(Log saved to ~/setup_txen.log)\033[0m"
