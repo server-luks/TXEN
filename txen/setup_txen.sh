@@ -4,6 +4,35 @@ set -e
 
 echo "🚀 Setting up Txen interpreter..."
 
+# Function to check if a package is installed
+pkg_installed() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Install Python if not installed
+if ! pkg_installed python; then
+    echo "Python not found. Installing Python..."
+    pkg install -y python
+else
+    echo "Python is already installed."
+fi
+
+# Install wget if not installed
+if ! pkg_installed wget; then
+    echo "wget not found. Installing wget..."
+    pkg install -y wget
+else
+    echo "wget is already installed."
+fi
+
+# Install coreutils if not installed (for commands like cp, mv, etc)
+if ! pkg_installed cp; then
+    echo "coreutils not found. Installing coreutils..."
+    pkg install -y coreutils
+else
+    echo "coreutils is already installed."
+fi
+
 BIN_DIR="$HOME/bin"
 TXEN_URL="https://raw.githubusercontent.com/server-luks/TXEN/refs/heads/main/txen/txen.py"
 TXEN_PATH="$BIN_DIR/txen"
